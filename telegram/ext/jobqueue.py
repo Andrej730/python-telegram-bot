@@ -205,7 +205,7 @@ class JobQueue(object):
         self._put(job, time_spec=first)
         return job
 
-    def run_daily(self, callback, time, days=Days.EVERY_DAY, context=None, name=None, tzinfo=None):
+    def run_daily(self, callback, time, days=Days.EVERY_DAY, context=None, name=None):
         """Creates a new ``Job`` that runs on a daily basis and adds it to the queue.
 
         Args:
@@ -221,8 +221,6 @@ class JobQueue(object):
                 Can be accessed through ``job.context`` in the callback. Defaults to ``None``.
             name (:obj:`str`, optional): The name of the new job. Defaults to
                 ``callback.__name__``.
-            tzinfo (:obj:`datetime.tzinfo`, optional): Timezone that will be used in
-                ``Job.tzinfo``. Defaults to UTC.
 
         Returns:
             :class:`telegram.ext.Job`: The new ``Job`` instance that has been added to the job
@@ -234,9 +232,6 @@ class JobQueue(object):
              to pin servers to UTC time, then time related behaviour can always be expected.
 
         """
-        # Previously tzinfo was set by value from time.tzinfo. It was moved to separate argument
-        # because this way it will be more explicit and consistent between
-        # run_repeating and run_once methods
         job = Job(callback,
                   interval=datetime.timedelta(days=1),
                   repeat=True,
@@ -244,7 +239,7 @@ class JobQueue(object):
                   context=context,
                   name=name,
                   job_queue=self,
-                  tzinfo=tzinfo)
+                  tzinfo=time.tzinfo)
         self._put(job, time_spec=time)
         return job
 
@@ -290,7 +285,7 @@ class JobQueue(object):
             if job.enabled:
                 try:
                     current_week_day = datetime.datetime.now(job.tzinfo).date().weekday()
-                    if any(day == current_week_day for day in job.days):
+                    if current_week_day in job.days:
                         self.logger.debug('Running job %s', job.name)
                         job.run(self._dispatcher)
 
